@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityServiceLocator.Extensions;
 
 namespace UnityServiceLocator {
     [DisallowMultipleComponent]
@@ -8,7 +9,7 @@ namespace UnityServiceLocator {
         internal ServiceLocator Container => container.OrNull() ?? (container = GetComponent<ServiceLocator>());
         
         bool hasBeenBootstrapped;
-
+        
         void Awake() => BootstrapOnDemand();
         
         public void BootstrapOnDemand() {

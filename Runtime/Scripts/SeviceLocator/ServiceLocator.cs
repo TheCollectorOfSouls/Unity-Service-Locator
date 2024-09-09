@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityServiceLocator.Extensions;
 
 namespace UnityServiceLocator {
     public class ServiceLocator : MonoBehaviour {
@@ -111,6 +112,17 @@ namespace UnityServiceLocator {
         }
         
         /// <summary>
+        /// Registers a service to the ServiceLocator using a name.
+        /// </summary>
+        /// <param name="serviceName">The name to use for registration.</param>
+        /// <param name="service">The service to register.</param>  
+        /// <returns>The ServiceLocator instance after registering the service.</returns>
+        public ServiceLocator Register(string serviceName, object service) {
+            services.Register(serviceName, service);
+            return this;
+        }
+        
+        /// <summary>
         /// Gets a service of a specific type. If no service of the required type is found, an error is thrown.
         /// </summary>
         /// <param name="service">Service of type T to get.</param>  
@@ -146,6 +158,22 @@ namespace UnityServiceLocator {
         }
         
         /// <summary>
+        /// Allows retrieval of a service of a specific type. An error is thrown if the required service does not exist.
+        /// </summary>
+        /// /// <param name="serviceName">Name of service to get.</param>  
+        /// <typeparam name="T">Class type of the service to be retrieved.</typeparam>
+        /// <returns>Instance of the service of type T.</returns>
+        public T Get<T>(string serviceName) where T : class
+        {
+            if (TryGetService(serviceName, out T service)) return service;
+
+            if (TryGetNextInHierarchy(out ServiceLocator container))
+                return container.Get<T>(serviceName);
+
+            throw new ArgumentException($"Could not resolve type '{typeof(T).FullName}'.");
+        }
+        
+        /// <summary>
         /// Tries to get a service of a specific type. Returns whether or not the process is successful.
         /// </summary>
         /// <param name="service">Service of type T to get.</param>  
@@ -159,6 +187,22 @@ namespace UnityServiceLocator {
                 return true;
 
             return TryGetNextInHierarchy(out ServiceLocator container) && container.TryGet(out service);
+        }
+
+        /// <summary>
+        /// Tries to get a service from a specific name. Returns whether or not the process is successful.
+        /// </summary>
+        /// <param name="serviceName">Name of service to get.</param>
+        /// <param name="service">Service of type T to get.</param>;
+        /// <typeparam name="T">Class type of the service to be retrieved.</typeparam>
+        /// <returns>True if the service retrieval was successful, false otherwise.</returns>
+        public bool TryGet<T>(string serviceName, out T service) where T : class {
+            service = null;
+
+            if (TryGetService(serviceName, out service))
+                return true;
+
+            return TryGetNextInHierarchy(out ServiceLocator container) && container.TryGet(serviceName, out service);
         }        
         
         bool TryGetService<T>(out T service) where T : class {
@@ -167,6 +211,10 @@ namespace UnityServiceLocator {
         
         bool TryGetService<T>(Type type, out T service) where T : class {
             return services.TryGet(out service);
+        }
+        
+        bool TryGetService<T>(string serviceName, out T service) where T : class {
+            return services.TryGet(serviceName, out service);
         }
         
         bool TryGetNextInHierarchy(out ServiceLocator container) {
